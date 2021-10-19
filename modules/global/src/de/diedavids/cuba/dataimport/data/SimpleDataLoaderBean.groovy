@@ -134,6 +134,7 @@ class SimpleDataLoaderBean implements SimpleDataLoader {
         LoadContext loadContext = getLoadContext(entityClass)
                 .setQuery(query)
                 .setView(view)
+                .setLoadDynamicAttributes(true)
 
         dataManager.loadList(loadContext) as Collection<E>
     }
