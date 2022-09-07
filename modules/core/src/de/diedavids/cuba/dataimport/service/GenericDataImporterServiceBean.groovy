@@ -523,6 +523,7 @@ class GenericDataImporterServiceBean implements GenericDataImporterService {
         EntityImportView importView = new EntityImportView(importEntityClass)
         addLocalPropertiesToImportView(importEntityClass, importView)
         addAssociationPropertiesToImportView(importConfiguration, importView)
+        addEmbeddedPropertiesToImportView(importConfiguration, importView)
         importView
     }
 
@@ -533,6 +534,22 @@ class GenericDataImporterServiceBean implements GenericDataImporterService {
                 .findAll { property ->
                     metadata.tools.isPersistent(property) && !property.type.equals(MetaProperty.Type.COMPOSITION)
                  }*.name
+
+        importView.addProperties(persistentProperties as String[])
+    }
+
+    private void addChildrenPropertiesToImportView(String parent, Class<? extends Entity> importEntityClass, EntityImportView importView) {
+        def importEntityMetaClass = metadata.getClass(importEntityClass)
+
+
+        Collection<String> persistentProperties = new ArrayList<>()
+
+        importEntityMetaClass
+            .properties
+            .findAll { property ->
+                metadata.tools.isPersistent(property) && !property.type.equals(MetaProperty.Type.COMPOSITION)
+                persistentProperties.add(parent + "." + property.name)
+            }
 
         importView.addProperties(persistentProperties as String[])
     }
@@ -549,6 +566,27 @@ class GenericDataImporterServiceBean implements GenericDataImporterService {
                 def associationMetaPropertyName = associationMetaProperty.name
                 if (associationMetaProperty.type == MetaProperty.Type.ASSOCIATION && associationMetaProperty.range.cardinality == Range.Cardinality.MANY_TO_ONE) {
                     importView.addManyToOneProperty(associationMetaPropertyName, ReferenceImportBehaviour.IGNORE_MISSING)
+                }
+            }
+        }
+    }
+
+    private void addEmbeddedPropertiesToImportView(ImportConfiguration importConfiguration, EntityImportView importView) {
+        validImportAttributeMappers(importConfiguration).each { ImportAttributeMapper importAttributeMapper ->
+            def importEntityClassName = importConfiguration.entityClass
+
+            def entityAttribute = importAttributeMapper.entityAttribute - (importEntityClassName + '.')
+            MetaPropertyPath path = metadata.getClass(importEntityClassName).getPropertyPath(entityAttribute)
+
+            if (isAutomaticAssociationAttribute(importAttributeMapper) || isCustomAttributeMapper(importAttributeMapper)) {
+                def associationMetaProperty = path.metaProperties[0]
+                def associationMetaPropertyName = associationMetaProperty.name
+                if (associationMetaProperty.type == MetaProperty.Type.ASSOCIATION && associationMetaProperty.range.cardinality == Range.Cardinality.ONE_TO_ONE) {
+
+//                    addChildrenPropertiesToImportView(entityAttribute, path.metaProperty.javaType, importView)
+                    EntityImportView embeddedEntityImportView = new EntityImportView(path.metaProperty.getJavaType())
+                    embeddedEntityImportView.addLocalProperties()
+                    importView.addOneToOneProperty(associationMetaPropertyName, embeddedEntityImportView)
                 }
             }
         }
