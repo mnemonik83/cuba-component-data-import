@@ -22,6 +22,7 @@ import org.springframework.stereotype.Service
 import javax.inject.Inject
 import javax.persistence.PersistenceException
 import javax.validation.ConstraintViolation
+import java.lang.annotation.Annotation
 import java.util.function.Consumer
 
 @SuppressWarnings('MethodSize')
@@ -581,7 +582,8 @@ class GenericDataImporterServiceBean implements GenericDataImporterService {
             if (isAutomaticAssociationAttribute(importAttributeMapper) || isCustomAttributeMapper(importAttributeMapper)) {
                 def associationMetaProperty = path.metaProperties[0]
                 def associationMetaPropertyName = associationMetaProperty.name
-                if (associationMetaProperty.type == MetaProperty.Type.ASSOCIATION && associationMetaProperty.range.cardinality == Range.Cardinality.ONE_TO_ONE) {
+                Annotation embeddableAnnotation = path.metaProperty.getJavaType().getAnnotation(javax.persistence.Embeddable.class);
+                if (associationMetaProperty.type == MetaProperty.Type.ASSOCIATION && associationMetaProperty.range.cardinality == Range.Cardinality.ONE_TO_ONE && embeddableAnnotation != null) {
 
 //                    addChildrenPropertiesToImportView(entityAttribute, path.metaProperty.javaType, importView)
                     EntityImportView embeddedEntityImportView = new EntityImportView(path.metaProperty.getJavaType())
